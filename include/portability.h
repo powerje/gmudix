@@ -63,12 +63,12 @@
    * codebase's "list files in a directory" use. Not 100% BSD-compatible
    * (no errno on partial OOM, etc.), but the call site treats any
    * non-positive return as "directory unreadable". */
-  static int gmx_alphasort(const struct dirent **a, const struct dirent **b)
+  static inline int gmx_alphasort(const struct dirent **a, const struct dirent **b)
   {
       return strcmp((*a)->d_name, (*b)->d_name);
   }
 
-  static int gmx_scandir(const char *dirpath, struct dirent ***namelist,
+  static inline int gmx_scandir(const char *dirpath, struct dirent ***namelist,
                          int (*filter)(const struct dirent *),
                          int (*compar)(const struct dirent **,
                                        const struct dirent **))

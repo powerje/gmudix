@@ -25,6 +25,10 @@ LDLIBS   = $(shell pkg-config --libs $(PKG_DEPS))
 ifdef WIN_HOST
   EXE_SUFFIX := .exe
   LDLIBS     += -lws2_32
+  # Some MSYS2 / mingw-w64 configurations define _WIN32 but not WIN32.
+  # The codebase predates that distinction, so define WIN32 explicitly
+  # to keep its existing `#if !defined(WIN32)` blocks coherent.
+  CPPFLAGS   += -DWIN32
 else
   EXE_SUFFIX :=
 endif
