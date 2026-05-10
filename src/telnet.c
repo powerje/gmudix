@@ -19,12 +19,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <unistd.h>
 #ifdef IAC_DEBUG
   #define TELCMDS
   #define TELOPTS
 #endif
-#include <arpa/telnet.h>    /* has to be after IAC_DEBUG */
+#include "portability.h"
+#include "telnet_compat.h"  /* has to be after IAC_DEBUG */
 #include "mudix.h"
 
 /* mccp */
@@ -49,7 +49,7 @@ static void send_telnet(USER *user, unsigned char command, unsigned char option)
 
     /* lock the mutex */
     g_mutex_lock(user_network_mutex);
-    write(user->net.sock, iac_buf, 3); /* bypassing normal send */
+    gmx_socket_write(user->net.sock, iac_buf, 3); /* bypassing normal send */
     /* unlock the mutex */
     g_mutex_unlock(user_network_mutex);
 }
@@ -73,7 +73,7 @@ static void send_data_telnet(USER *user, unsigned char *data, int len)
     /* lock the mutex */
     g_mutex_lock(user_network_mutex);
 
-    write(user->net.sock, data, len); /* bypassing normal send */
+    gmx_socket_write(user->net.sock, data, len); /* bypassing normal send */
 
     /* unlock the mutex */
     g_mutex_unlock(user_network_mutex);

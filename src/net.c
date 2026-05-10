@@ -19,13 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/telnet.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include "portability.h"
+#include "telnet_compat.h"
 #include "mudix.h"
 #include "gui.h"
 
@@ -59,8 +54,8 @@ int read_data(USER *user)
     g_mutex_lock(user_network_mutex);
 
     /* read the data from the socket */
-    nRead = read(user->net.sock, user->net.rxp,
-                 RXBUF_LENGTH - (user->net.rxp - user->net.rxbuf));
+    nRead = gmx_socket_read(user->net.sock, user->net.rxp,
+                            RXBUF_LENGTH - (user->net.rxp - user->net.rxbuf));
     /* unlock the mutex */
     g_mutex_unlock(user_network_mutex);
 
@@ -73,8 +68,9 @@ int read_data(USER *user)
     {
         gui_user_disconnect(user);
     }
-    /* also disconnect if nRead < 0 and errno is not EWOULDBLOCK and EAGAIN */
-    else if (errno != EWOULDBLOCK && errno != EAGAIN)
+    /* also disconnect if nRead < 0 and the error isn't a transient
+     * "would block" / "again later" condition */
+    else if (!gmx_socket_would_block())
     {
         gui_user_disconnect(user);
     }
@@ -121,13 +117,13 @@ int write_data(USER *user, gchar *buffer, int len)
                 if ((unsigned char)*pStr == IAC)
                 {
                     /* send data upto the IAC */
-                    if ((nrWrite = write(user->net.sock, pMrk, pStr-pMrk+1)) < 0)
+                    if ((nrWrite = gmx_socket_write(user->net.sock, pMrk, pStr-pMrk+1)) < 0)
                     {
                         break;
                     }
 
                     /* send an extra IAC */
-                    if ((nrWrite = write(user->net.sock, pStr, 1)) < 0)
+                    if ((nrWrite = gmx_socket_write(user->net.sock, pStr, 1)) < 0)
                     {
                         break;
                     }
@@ -140,7 +136,7 @@ int write_data(USER *user, gchar *buffer, int len)
 
             if (pMrk != pStr)
             {
-                 nrWrite = write(user->net.sock, pMrk, pStr-pMrk);
+                 nrWrite = gmx_socket_write(user->net.sock, pMrk, pStr-pMrk);
             }
 
             /* finally free the temporary conversion buffer */
@@ -182,13 +178,13 @@ static NET_CODE do_connect(char *site, int port, int *sock, int *addr, char **ho
 
     if (connect(*sock, (struct sockaddr *)&server, sizeof(server)) == -1)
     {
-        close(*sock);
+        gmx_socket_close(*sock);
         return NET_CONNECT_FAILURE;
     }
 
-    if (fcntl(*sock, F_SETFL, O_NONBLOCK) == -1)
+    if (gmx_set_nonblocking(*sock) == -1)
     {
-        perror("fcntl: O_NONBLOCK (fatal?)");
+        perror("set_nonblocking (fatal?)");
     }
     return NET_CONNECTED;
 }
@@ -219,7 +215,7 @@ void do_disconnect(USER *user)
     /* close the socket */
     if (user->net.sock)
     {
-        close(user->net.sock);
+        gmx_socket_close(user->net.sock);
     }
 
     /* set network status */
@@ -288,7 +284,7 @@ void *connect_thread(USER *user)
         /* just close the socket if it is open */
         if (ret == NET_CONNECTED)
         {
-            close(sock);
+            gmx_socket_close(sock);
         }
     }
     else
@@ -318,7 +314,7 @@ void *connect_thread(USER *user)
                 gtk_input_remove(user->net.rx_tag);
                 gtk_input_remove(user->net.exc_tag);
                 gdk_threads_leave();
-                close(user->net.sock);
+                gmx_socket_close(user->net.sock);
             }
 
             /* we are connected, so set data in user structure :) */
