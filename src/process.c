@@ -20,11 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if !defined(WIN32)
-  #include <arpa/telnet.h>
-#else
-  #include <windows.h>
-#endif
+#include "portability.h"
+#include "telnet_compat.h"
 #include "mudix.h"
 
 

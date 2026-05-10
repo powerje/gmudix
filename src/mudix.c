@@ -17,18 +17,29 @@
  */
 
 #include <stdio.h>
-#include <signal.h>
-#include <sys/wait.h>
+#include "portability.h"
 #include "mudix.h"
+
+#if !defined(WIN32) && !defined(_WIN32)
+  #include <signal.h>
+  #include <sys/wait.h>
 
 void signal_handler(int signal) {
     /* just call wait with no hang so that we get no zombies */
     waitpid(-1, NULL, WNOHANG);
 }
+#endif
 
 int main(int argc, char *argv[]) {
+    gmx_net_init();
+
+#if !defined(WIN32) && !defined(_WIN32)
     /* install a signal for SIGCHLD for when a child dies */
     signal(SIGCHLD, signal_handler);
+#endif
+
     init_gui(argc, argv);
+
+    gmx_net_cleanup();
     return 0;
 }

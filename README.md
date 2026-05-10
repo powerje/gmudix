@@ -1,5 +1,12 @@
-History
--------
+# gMUDix
+
+[![Build](https://github.com/powerje/gmudix/actions/workflows/build.yml/badge.svg?branch=default)](https://github.com/powerje/gmudix/actions/workflows/build.yml)
+
+A GTK+ 2 graphical MUD client. Builds on macOS (arm64), Linux (x86_64), and Windows (MinGW64) — see the [CI pipeline](.github/workflows/build.yml) for binary artifacts on each push.
+
+## History
+
+> Original notes from Marko Boomstra, who wrote gMUDix in 2002.
 
 I started coding this mud client a long time back ('96) when I had to use
 telnet to MUD. At first it was only intended for personal use on my own MUD
