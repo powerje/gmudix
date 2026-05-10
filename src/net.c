@@ -186,9 +186,9 @@ static NET_CODE do_connect(char *site, int port, int *sock, int *addr, char **ho
         return NET_CONNECT_FAILURE;
     }
 
-    if (fcntl(*sock, F_SETFL, O_NDELAY) == -1)
+    if (fcntl(*sock, F_SETFL, O_NONBLOCK) == -1)
     {
-        perror("fcntl: O_NDELAY (fatal?)");
+        perror("fcntl: O_NONBLOCK (fatal?)");
     }
     return NET_CONNECTED;
 }
