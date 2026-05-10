@@ -9,6 +9,8 @@
 #define _PORTABILITY_H_
 
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 
 #if defined(WIN32) || defined(_WIN32)
@@ -17,6 +19,7 @@
   #include <ws2tcpip.h>
   #include <windows.h>
   #include <io.h>
+  #include <dirent.h>  /* mingw provides opendir/readdir but not scandir */
 
   static inline int gmx_socket_read(int sock, void *buf, size_t len)
   {
@@ -55,6 +58,61 @@
   {
       WSACleanup();
   }
+
+  /* scandir + alphasort polyfills for mingw, sufficient for the
+   * codebase's "list files in a directory" use. Not 100% BSD-compatible
+   * (no errno on partial OOM, etc.), but the call site treats any
+   * non-positive return as "directory unreadable". */
+  static int gmx_alphasort(const struct dirent **a, const struct dirent **b)
+  {
+      return strcmp((*a)->d_name, (*b)->d_name);
+  }
+
+  static int gmx_scandir(const char *dirpath, struct dirent ***namelist,
+                         int (*filter)(const struct dirent *),
+                         int (*compar)(const struct dirent **,
+                                       const struct dirent **))
+  {
+      DIR *dir = opendir(dirpath);
+      if (!dir) return -1;
+
+      struct dirent **list = NULL;
+      size_t cap = 0, count = 0;
+      struct dirent *ent;
+
+      while ((ent = readdir(dir)) != NULL) {
+          if (filter && !filter(ent)) continue;
+          if (count == cap) {
+              size_t new_cap = cap ? cap * 2 : 16;
+              struct dirent **new_list =
+                  (struct dirent **)realloc(list, new_cap * sizeof(*new_list));
+              if (!new_list) goto oom;
+              list = new_list;
+              cap = new_cap;
+          }
+          struct dirent *copy = (struct dirent *)malloc(sizeof(*copy));
+          if (!copy) goto oom;
+          *copy = *ent;
+          list[count++] = copy;
+      }
+      closedir(dir);
+
+      if (compar) {
+          qsort(list, count, sizeof(*list),
+                (int (*)(const void *, const void *))compar);
+      }
+      *namelist = list;
+      return (int)count;
+
+oom:
+      closedir(dir);
+      while (count) free(list[--count]);
+      free(list);
+      return -1;
+  }
+
+  #define scandir   gmx_scandir
+  #define alphasort gmx_alphasort
 
 #else
   #include <sys/types.h>

@@ -23,8 +23,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <unistd.h>
 #include <time.h>
+#include "portability.h"
 #include "mudix.h"
 
 /* so it can be available in all functions */
